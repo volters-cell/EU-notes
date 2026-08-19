@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EU country notes — shared</title>
+<style>
+  :root{
+    --ink:#12213a; --paper:#eef1f6; --line:#c3ccdb;
+    --green:#2f8f5b; --yellow:#e0a92b; --red:#c0433c; --none:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:15px/1.5 "Inter","Helvetica Neue",Arial,sans-serif}
+  header{padding:28px 24px 12px;max-width:1100px;margin:0 auto}
+  h1{margin:0;font-size:22px;letter-spacing:-.01em}
+  .sub{color:#5b6b85;font-size:13px;margin-top:4px}
+  .wrap{display:flex;gap:20px;max-width:1100px;margin:0 auto;padding:12px 24px 48px;align-items:flex-start;flex-wrap:wrap}
+  .grid{flex:1 1 480px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .c{border:1px solid var(--line);background:var(--none);border-radius:6px;
+    padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit;
+    display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .c:hover{border-color:var(--ink)}
+  .c.sel{outline:2px solid var(--ink);outline-offset:1px}
+  .c[data-s="green"]{background:var(--green);color:#fff;border-color:transparent}
+  .c[data-s="yellow"]{background:var(--yellow);color:#2a2003;border-color:transparent}
+  .c[data-s="red"]{background:var(--red);color:#fff;border-color:transparent}
+  .dot{font-size:11px;opacity:.75}
+  aside{flex:0 0 320px;position:sticky;top:16px;border:1px solid var(--line);
+    background:#fff;border-radius:8px;padding:16px}
+  aside h2{margin:0 0 10px;font-size:17px}
+  .btns{display:flex;gap:6px;margin-bottom:10px}
+  .btns button{flex:1;padding:8px;border:1px solid var(--line);border-radius:5px;
+    background:#fff;cursor:pointer;font:inherit}
+  .btns button[data-v="green"]{border-color:var(--green);color:var(--green)}
+  .btns button[data-v="yellow"]{border-color:var(--yellow);color:#8a6706}
+  .btns button[data-v="red"]{border-color:var(--red);color:var(--red)}
+  .btns button.on{color:#fff}
+  .btns button[data-v="green"].on{background:var(--green)}
+  .btns button[data-v="yellow"].on{background:var(--yellow);color:#2a2003}
+  .btns button[data-v="red"].on{background:var(--red)}
+  .btns button[data-v="none"].on{background:var(--ink);color:#fff}
+  textarea{width:100%;min-height:220px;padding:10px;border:1px solid var(--line);
+    border-radius:5px;font:inherit;resize:vertical}
+  .hint{color:#5b6b85;font-size:13px}
+  #status{font-size:12px;color:#5b6b85;margin-top:6px;min-height:18px}
+</style>
+</head>
+<body>
+<header>
+  <h1>EU country notes</h1>
+  <div class="sub">Shared board — everyone with this link sees and edits the same notes.</div>
+  <div id="status"></div>
+</header>
+<div class="wrap">
+  <div class="grid" id="grid"></div>
+  <aside>
+    <h2 id="title">No country selected</h2>
+    <div id="panel" style="display:none">
+      <div class="btns">
+        <button data-v="green">Green</button>
+        <button data-v="yellow">Yellow</button>
+        <button data-v="red">Red</button>
+        <button data-v="none">Clear</button>
+      </div>
+      <textarea id="notes" placeholder="Your notes…"></textarea>
+    </div>
+    <p class="hint" id="hint">Click a country on the left.</p>
+  </aside>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// ---- 1. PASTE YOUR SUPABASE VALUES HERE ----
+const SUPABASE_URL = "https://zpmomawlbpvudsqfjvxl.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_jyYrocXMSYYN9hAcUkdNhg_Zila8s8A";
+// --------------------------------------------
+
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const COUNTRIES=["Austria","Belgium","Bulgaria","Croatia","Cyprus","Czechia","Denmark","Estonia","Finland","France","Germany","Greece","Hungary","Ireland","Italy","Latvia","Lithuania","Luxembourg","Malta","Netherlands","Poland","Portugal","Romania","Slovakia","Slovenia","Spain","Sweden"];
+let data={}, current=null;
+
+const grid=document.getElementById("grid"),
+      title=document.getElementById("title"),
+      panel=document.getElementById("panel"),
+      hint=document.getElementById("hint"),
+      notes=document.getElementById("notes"),
+      statusEl=document.getElementById("status");
+
+const say=m=>statusEl.textContent=m;
+const get=c=>data[c]||(data[c]={status:"none",note:""});
+
+async function pull(){
+  const {data:rows,error}=await sb.from("eu_notes").select("*");
+  if(error){say("Can't reach the board: "+error.message);return;}
+  const fresh={};
+  rows.forEach(r=>fresh[r.country]={status:r.status||"none",note:r.note||""});
+  data=fresh; render(); if(current) select(current,true);
+  say("Up to date");
+}
+
+let t;
+function save(){
+  clearTimeout(t);
+  t=setTimeout(async()=>{
+    const c=current, d=get(c);
+    const {error}=await sb.from("eu_notes")
+      .upsert({country:c,status:d.status,note:d.note},{onConflict:"country"});
+    say(error?"Not saved: "+error.message:"Saved");
+  },500);
+}
+
+function render(){
+  grid.innerHTML="";
+  COUNTRIES.forEach(c=>{
+    const d=get(c), b=document.createElement("button");
+    b.className="c"+(c===current?" sel":"");
+    b.dataset.s=d.status;
+    b.innerHTML=`<span>${c}</span><span class="dot">${d.note?"✎":""}</span>`;
+    b.onclick=()=>select(c);
+    grid.appendChild(b);
+  });
+}
+
+function select(c,keepCursor){
+  current=c; const d=get(c);
+  title.textContent=c; panel.style.display="block"; hint.style.display="none";
+  if(!keepCursor||document.activeElement!==notes) notes.value=d.note;
+  document.querySelectorAll(".btns button").forEach(b=>
+    b.classList.toggle("on",b.dataset.v===d.status));
+  render();
+}
+
+document.querySelectorAll(".btns button").forEach(b=>b.onclick=()=>{
+  if(!current)return;
+  get(current).status=b.dataset.v; save(); select(current);
+});
+notes.oninput=()=>{ if(current){get(current).note=notes.value; save(); render();} };
+
+// live updates from other people
+sb.channel("eu_notes")
+  .on("postgres_changes",{event:"*",schema:"public",table:"eu_notes"},payload=>{
+    const r=payload.new; if(!r||!r.country) return;
+    if(r.country===current&&document.activeElement===notes){ data[r.country].status=r.status; }
+    else data[r.country]={status:r.status||"none",note:r.note||""};
+    render(); if(current) select(current,true);
+  }).subscribe();
+
+setInterval(()=>{ if(document.activeElement!==notes) pull(); },30000);
+render();
+say("Connecting…");
+pull();
+</script>
+</body>
+</html>
