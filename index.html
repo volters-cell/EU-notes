@@ -34,11 +34,9 @@
     background:#fff;cursor:pointer;font:inherit}
   .btns button[data-v="green"]{border-color:var(--green);color:var(--green)}
   .btns button[data-v="yellow"]{border-color:var(--yellow);color:#8a6706}
-  .btns button[data-v="red"]{border-color:var(--red);color:var(--red)}
   .btns button.on{color:#fff}
   .btns button[data-v="green"].on{background:var(--green)}
   .btns button[data-v="yellow"].on{background:var(--yellow);color:#2a2003}
-  .btns button[data-v="red"].on{background:var(--red)}
   .btns button[data-v="none"].on{background:var(--ink);color:#fff}
   textarea{width:100%;min-height:220px;padding:10px;border:1px solid var(--line);
     border-radius:5px;font:inherit;resize:vertical}
@@ -58,9 +56,8 @@
     <h2 id="title">No country selected</h2>
     <div id="panel" style="display:none">
       <div class="btns">
-        <button data-v="green">Green</button>
-        <button data-v="yellow">Yellow</button>
-        <button data-v="red">Red</button>
+        <button data-v="green">Answered</button>
+        <button data-v="yellow">Not clear</button>
         <button data-v="none">Clear</button>
       </div>
       <textarea id="notes" placeholder="Your notes…"></textarea>
