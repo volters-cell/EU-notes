@@ -143,7 +143,7 @@ notes.oninput=()=>{ if(current){get(current).note=notes.value; save(); render();
 sb.channel("eu_notes")
   .on("postgres_changes",{event:"*",schema:"public",table:"eu_notes"},payload=>{
     const r=payload.new; if(!r||!r.country) return;
-    if(r.country===current&&document.activeElement===notes){ data[r.country].status=r.status; }
+    if(r.country===current&&document.activeElement===notes){ get(r.country).status=r.status||"none"; }
     else data[r.country]={status:r.status||"none",note:r.note||""};
     render(); if(current) select(current,true);
   }).subscribe();
