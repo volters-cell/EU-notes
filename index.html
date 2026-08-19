@@ -12,10 +12,10 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--paper);color:var(--ink);
     font:15px/1.5 "Inter","Helvetica Neue",Arial,sans-serif}
-  header{padding:28px 24px 12px;max-width:1100px;margin:0 auto}
+  header{padding:28px 24px 12px;max-width:1240px;margin:0 auto}
   h1{margin:0;font-size:22px;letter-spacing:-.01em}
   .sub{color:#5b6b85;font-size:13px;margin-top:4px}
-  .wrap{display:flex;gap:20px;max-width:1100px;margin:0 auto;padding:12px 24px 48px;align-items:flex-start;flex-wrap:wrap}
+  .wrap{display:flex;gap:20px;max-width:1240px;margin:0 auto;padding:12px 24px 48px;align-items:flex-start;flex-wrap:wrap}
   .grid{flex:1 1 480px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
   .c{border:1px solid var(--line);background:var(--none);border-radius:6px;
     padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit;
@@ -27,7 +27,12 @@
   .c[data-s="red"]{background:var(--red);color:#fff;border-color:transparent}
   .dot{font-size:11px;opacity:.75}
   aside{flex:0 0 320px;position:sticky;top:16px;border:1px solid var(--line);
-    background:#fff;border-radius:8px;padding:16px}
+    background:#fff;border-radius:8px;padding:16px;
+    max-height:calc(100vh - 32px);overflow:auto;
+    transition:flex-basis .18s ease}
+  aside.open{flex:0 0 min(620px,100%);padding:22px}
+  aside.open h2{font-size:22px;margin-bottom:14px}
+  aside.open textarea{min-height:min(62vh,560px)}
   aside h2{margin:0 0 10px;font-size:17px}
   .btns{display:flex;gap:6px;margin-bottom:10px}
   .btns button{flex:1;padding:8px;border:1px solid var(--line);border-radius:5px;
@@ -84,7 +89,8 @@ const grid=document.getElementById("grid"),
       panel=document.getElementById("panel"),
       hint=document.getElementById("hint"),
       notes=document.getElementById("notes"),
-      statusEl=document.getElementById("status");
+      statusEl=document.getElementById("status"),
+      asideEl=document.querySelector("aside");
 
 const say=m=>statusEl.textContent=m;
 const get=c=>data[c]||(data[c]={status:"none",note:""});
@@ -124,6 +130,7 @@ function render(){
 function select(c,keepCursor){
   current=c; const d=get(c);
   title.textContent=c; panel.style.display="block"; hint.style.display="none";
+  asideEl.classList.add("open");
   if(!keepCursor||document.activeElement!==notes) notes.value=d.note;
   document.querySelectorAll(".btns button").forEach(b=>
     b.classList.toggle("on",b.dataset.v===d.status));
