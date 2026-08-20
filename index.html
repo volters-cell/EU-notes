@@ -12,11 +12,27 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--paper);color:var(--ink);
     font:15px/1.5 "Inter","Helvetica Neue",Arial,sans-serif}
-  header{padding:28px 24px 12px;max-width:1240px;margin:0 auto}
+  header{padding:28px 24px 8px;max-width:1240px;margin:0 auto}
   h1{margin:0;font-size:22px;letter-spacing:-.01em}
   .sub{color:#5b6b85;font-size:13px;margin-top:4px}
+  #status{font-size:12px;color:#5b6b85;margin-top:6px;min-height:18px}
+  #status.bad{color:var(--red);font-weight:600}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#5b6b85;margin-top:8px}
+  .legend i{font-style:normal;display:inline-flex;align-items:center;gap:5px}
+  .sw{width:13px;height:13px;border-radius:3px;border:1px solid var(--line);display:inline-block}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+    max-width:1240px;margin:0 auto;padding:10px 24px 0}
+  .toolbar input[type=search]{flex:0 1 240px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:5px;font:inherit}
+  .chip{padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;
+    cursor:pointer;font:inherit;font-size:13px;color:inherit}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  #counts{font-size:12px;color:#5b6b85;margin-left:auto}
+
   .wrap{display:flex;gap:20px;max-width:1240px;margin:0 auto;padding:12px 24px 48px;align-items:flex-start;flex-wrap:wrap}
-  .grid{flex:1 1 480px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .grid{flex:1 1 480px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;align-content:start}
+  .empty{color:#5b6b85;font-size:13px;padding:8px 2px}
   .c{border:1px solid var(--line);background:var(--none);border-radius:6px;
     padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit;
     display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -25,15 +41,20 @@
   .c[data-s="green"]{background:var(--green);color:#fff;border-color:transparent}
   .c[data-s="yellow"]{background:var(--yellow);color:#2a2003;border-color:transparent}
   .c[data-s="red"]{background:var(--red);color:#fff;border-color:transparent}
-  .dot{font-size:11px;opacity:.75}
+  .dot{font-size:12px;opacity:.85;white-space:nowrap;letter-spacing:1px}
+
   aside{flex:0 0 320px;position:sticky;top:16px;border:1px solid var(--line);
     background:#fff;border-radius:8px;padding:16px;
     max-height:calc(100vh - 32px);overflow:auto;
     transition:flex-basis .18s ease}
   aside.open{flex:0 0 min(620px,100%);padding:22px}
-  aside.open h2{font-size:22px;margin-bottom:14px}
-  aside.open textarea{min-height:min(62vh,560px)}
-  aside h2{margin:0 0 10px;font-size:17px}
+  aside.open h2{font-size:22px}
+  aside.open textarea{min-height:min(58vh,520px)}
+  .phead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  aside h2{margin:0;font-size:17px;flex:1}
+  .icon{border:1px solid var(--line);background:#fff;border-radius:5px;cursor:pointer;
+    font:inherit;font-size:13px;padding:5px 9px;color:inherit}
+  .icon:disabled{opacity:.4;cursor:default}
   .btns{display:flex;gap:6px;margin-bottom:10px}
   .btns button{flex:1;padding:8px;border:1px solid var(--line);border-radius:5px;
     background:#fff;cursor:pointer;font:inherit}
@@ -43,10 +64,19 @@
   .btns button[data-v="green"].on{background:var(--green)}
   .btns button[data-v="yellow"].on{background:var(--yellow);color:#2a2003}
   .btns button[data-v="none"].on{background:var(--ink);color:#fff}
+  .btns button:disabled{opacity:.5;cursor:default}
   textarea{width:100%;min-height:220px;padding:10px;border:1px solid var(--line);
     border-radius:5px;font:inherit;resize:vertical}
   .hint{color:#5b6b85;font-size:13px}
-  #status{font-size:12px;color:#5b6b85;margin-top:6px;min-height:18px}
+  #meta{font-size:12px;color:#5b6b85;margin-top:8px;min-height:16px}
+  #who{margin-top:10px;display:flex;align-items:center;gap:8px;font-size:12px;color:#5b6b85}
+  #who input{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font:inherit;font-size:13px}
+  #conflict{display:none;border:1px solid var(--yellow);background:#fdf6e3;
+    border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+  #conflict p{margin:0 0 8px}
+  #conflict .row{display:flex;gap:6px}
+  #conflict button{flex:1;padding:6px;border:1px solid var(--line);background:#fff;
+    border-radius:5px;cursor:pointer;font:inherit;font-size:13px}
 </style>
 </head>
 <body>
@@ -54,108 +84,285 @@
   <h1>EU country notes</h1>
   <div class="sub">Shared board — everyone with this link sees and edits the same notes.</div>
   <div id="status"></div>
+  <div class="legend">
+    <i><span class="sw" style="background:var(--green)"></span> ✓ Answered</i>
+    <i><span class="sw" style="background:var(--yellow)"></span> ? Not clear</i>
+    <i><span class="sw" style="background:#fff"></span> No status</i>
+    <i>✎ has notes</i>
+  </div>
 </header>
+
+<div class="toolbar">
+  <input type="search" id="q" placeholder="Search countries…" autocomplete="off">
+  <button class="chip on" data-f="all">All</button>
+  <button class="chip" data-f="green">Answered</button>
+  <button class="chip" data-f="yellow">Not clear</button>
+  <button class="chip" data-f="blank">Blank</button>
+  <span id="counts"></span>
+</div>
+
 <div class="wrap">
   <div class="grid" id="grid"></div>
   <aside>
-    <h2 id="title">No country selected</h2>
+    <div class="phead">
+      <h2 id="title">No country selected</h2>
+      <button class="icon" id="undo" disabled title="Undo the last status change">↶ Undo</button>
+      <button class="icon" id="close" style="display:none" title="Close (Esc)">✕</button>
+    </div>
     <div id="panel" style="display:none">
+      <div id="conflict">
+        <p id="conflictMsg">Someone else changed this note while you were typing.</p>
+        <div class="row">
+          <button id="takeTheirs">Load their version</button>
+          <button id="keepMine">Keep mine</button>
+        </div>
+      </div>
       <div class="btns">
         <button data-v="green">Answered</button>
         <button data-v="yellow">Not clear</button>
         <button data-v="none">Delete</button>
       </div>
       <textarea id="notes" placeholder="Your notes…"></textarea>
+      <div id="meta"></div>
+      <div id="who"><label for="me">Your name</label><input id="me" maxlength="24" placeholder="optional"></div>
     </div>
     <p class="hint" id="hint">Click a country on the left.</p>
   </aside>
 </div>
 
 <script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-// ---- 1. PASTE YOUR SUPABASE VALUES HERE ----
 const SUPABASE_URL = "https://zpmomawlbpvudsqfjvxl.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_jyYrocXMSYYN9hAcUkdNhg_Zila8s8A";
-// --------------------------------------------
-
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const COUNTRIES=["Austria","Belgium","Bulgaria","Croatia","Cyprus","Czechia","Denmark","Estonia","Finland","France","Germany","Greece","Hungary","Ireland","Italy","Latvia","Lithuania","Luxembourg","Malta","Netherlands","Poland","Portugal","Romania","Slovakia","Slovenia","Spain","Sweden"];
-let data={}, current=null;
+const MARK={green:"✓",yellow:"?",red:"!",none:""};
 
-const grid=document.getElementById("grid"),
-      title=document.getElementById("title"),
-      panel=document.getElementById("panel"),
-      hint=document.getElementById("hint"),
-      notes=document.getElementById("notes"),
-      statusEl=document.getElementById("status"),
-      asideEl=document.querySelector("aside");
+const $=id=>document.getElementById(id);
+const grid=$("grid"), title=$("title"), panel=$("panel"), hint=$("hint"), notes=$("notes"),
+      statusEl=$("status"), countsEl=$("counts"), conflictEl=$("conflict"),
+      undoBtn=$("undo"), closeBtn=$("close"), meInput=$("me"), metaEl=$("meta"),
+      searchEl=$("q"), asideEl=document.querySelector("aside");
 
-const say=m=>statusEl.textContent=m;
-const get=c=>data[c]||(data[c]={status:"none",note:""});
+let data={}, current=null, filter="all", q="";
+let undoStack=[], pendingRemote=null, authorSupported=true, sb=null, offline=false;
+let me=(localStorage.getItem("eu_notes_author")||"");
 
-async function pull(){
-  const {data:rows,error}=await sb.from("eu_notes").select("*");
-  if(error){say("Can't reach the board: "+error.message);return;}
-  const fresh={};
-  rows.forEach(r=>fresh[r.country]={status:r.status||"none",note:r.note||""});
-  data=fresh; render(); if(current) select(current,true);
-  say("Up to date");
-}
+const say=(m,bad)=>{statusEl.textContent=m;statusEl.classList.toggle("bad",!!bad);};
+const get=c=>data[c]||(data[c]={status:"none",note:"",author:""});
 
-let t;
-function save(){
-  clearTimeout(t);
-  t=setTimeout(async()=>{
-    const c=current, d=get(c);
-    const {error}=await sb.from("eu_notes")
-      .upsert({country:c,status:d.status,note:d.note},{onConflict:"country"});
-    say(error?"Not saved: "+error.message:"Saved");
-  },500);
-}
+// ---- load the sync library; the board still renders if the CDN is unreachable ----
+try{
+  const mod=await import("https://esm.sh/@supabase/supabase-js@2");
+  sb=mod.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+}catch(e){ offline=true; }
 
-function render(){
-  grid.innerHTML="";
-  COUNTRIES.forEach(c=>{
-    const d=get(c), b=document.createElement("button");
-    b.className="c"+(c===current?" sel":"");
-    b.dataset.s=d.status;
-    b.innerHTML=`<span>${c}</span><span class="dot">${d.note?"✎":""}</span>`;
-    b.onclick=()=>select(c);
-    grid.appendChild(b);
+// ---------------- rendering ----------------
+const tiles=new Map();
+
+function visible(){
+  return COUNTRIES.filter(c=>{
+    if(q && !c.toLowerCase().includes(q)) return false;
+    const s=get(c).status;
+    if(filter==="all") return true;
+    if(filter==="blank") return s==="none";
+    return s===filter;
   });
 }
 
+function render(){
+  grid.innerHTML=""; tiles.clear();
+  const list=visible();
+  if(!list.length){
+    const p=document.createElement("div");
+    p.className="empty"; p.textContent="No countries match this filter.";
+    grid.appendChild(p);
+  }
+  list.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="c";
+    b.appendChild(document.createElement("span"));
+    b.appendChild(document.createElement("span")).className="dot";
+    b.onclick=()=>select(c);
+    grid.appendChild(b); tiles.set(c,b);
+    paint(c);
+  });
+  counts();
+}
+
+// repaint one tile only — used while typing so we don't rebuild 27 nodes per keystroke
+function paint(c){
+  const b=tiles.get(c); if(!b) return;
+  const d=get(c);
+  b.dataset.s=d.status;
+  b.classList.toggle("sel",c===current);
+  b.children[0].textContent=c;
+  b.children[1].textContent=(MARK[d.status]||"")+(d.note?" ✎":"");
+}
+
+function counts(){
+  let g=0,y=0,r=0,n=0;
+  COUNTRIES.forEach(c=>{const s=get(c).status;
+    if(s==="green")g++; else if(s==="yellow")y++; else if(s==="red")r++; else n++;});
+  countsEl.textContent=`${g} answered · ${y} not clear · ${n} blank`+(r?` · ${r} old red`:"");
+}
+
+// ---------------- selection ----------------
 function select(c,keepCursor){
-  current=c; const d=get(c);
-  title.textContent=c; panel.style.display="block"; hint.style.display="none";
-  asideEl.classList.add("open");
+  current=c;
+  const d=get(c);
+  title.textContent=c;
+  panel.style.display="block"; hint.style.display="none";
+  closeBtn.style.display=""; asideEl.classList.add("open");
   if(!keepCursor||document.activeElement!==notes) notes.value=d.note;
-  document.querySelectorAll(".btns button").forEach(b=>
+  metaEl.textContent=d.author?`Last edited by ${d.author}`:"";
+  document.querySelectorAll(".btns button[data-v]").forEach(b=>
     b.classList.toggle("on",b.dataset.v===d.status));
   render();
 }
 
-document.querySelectorAll(".btns button").forEach(b=>b.onclick=()=>{
-  if(!current)return;
-  get(current).status=b.dataset.v; save(); select(current);
+function deselect(){
+  current=null; pendingRemote=null;
+  conflictEl.style.display="none";
+  panel.style.display="none"; hint.style.display="block";
+  closeBtn.style.display="none";
+  title.textContent="No country selected";
+  asideEl.classList.remove("open");
+  render();
+}
+
+closeBtn.onclick=deselect;
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape"||!current) return;
+  if(document.activeElement===notes) notes.blur(); else deselect();
 });
-notes.oninput=()=>{ if(current){get(current).note=notes.value; save(); render();} };
 
-// live updates from other people
-sb.channel("eu_notes")
-  .on("postgres_changes",{event:"*",schema:"public",table:"eu_notes"},payload=>{
-    const r=payload.new; if(!r||!r.country) return;
-    if(r.country===current&&document.activeElement===notes){ get(r.country).status=r.status||"none"; }
-    else data[r.country]={status:r.status||"none",note:r.note||""};
-    render(); if(current) select(current,true);
-  }).subscribe();
+// ---------------- saving ----------------
+let t;
+function save(){
+  if(!sb) return;
+  clearTimeout(t);
+  t=setTimeout(async()=>{
+    const c=current; if(!c) return;
+    const d=get(c);
+    const base={country:c,status:d.status,note:d.note};
+    const row=(authorSupported&&me)?{...base,author:me}:base;
+    let {error}=await sb.from("eu_notes").upsert(row,{onConflict:"country"});
+    if(error&&authorSupported&&me&&/author|column|schema/i.test(error.message||"")){
+      // the table has no author column — drop the name and carry on saving
+      authorSupported=false;
+      meInput.disabled=true; meInput.value=""; meInput.placeholder="needs an 'author' column";
+      ({error}=await sb.from("eu_notes").upsert(base,{onConflict:"country"}));
+    }
+    if(error) say("Not saved: "+error.message,true);
+    else{ if(me&&authorSupported){d.author=me;} say("Saved"); }
+  },500);
+}
 
-setInterval(()=>{ if(document.activeElement!==notes) pull(); },30000);
+// ---------------- undo (status changes and Delete) ----------------
+function pushUndo(c){
+  const d=get(c);
+  undoStack.push({c,status:d.status,note:d.note});
+  if(undoStack.length>50) undoStack.shift();
+  undoBtn.disabled=false;
+}
+undoBtn.onclick=()=>{
+  const u=undoStack.pop(); if(!u) return;
+  const d=get(u.c); d.status=u.status; d.note=u.note;
+  select(u.c); notes.value=u.note;
+  save();
+  undoBtn.disabled=!undoStack.length;
+  say("Undone");
+};
+
+// ---------------- edits ----------------
+document.querySelectorAll(".btns button[data-v]").forEach(b=>b.onclick=()=>{
+  if(!current||offline) return;
+  if(b.dataset.v==="none"&&get(current).status!=="none"&&
+     !confirm(`Clear the status for ${current}? The note text is kept, and everyone on the board sees this. You can undo it.`)) return;
+  pushUndo(current);
+  get(current).status=b.dataset.v;
+  save(); select(current,true);
+});
+
+notes.oninput=()=>{
+  if(!current) return;
+  get(current).note=notes.value;
+  save(); paint(current);   // one tile, not the whole grid
+};
+
+meInput.value=me;
+meInput.oninput=()=>{ me=meInput.value.trim(); localStorage.setItem("eu_notes_author",me); };
+
+// ---------------- filters ----------------
+searchEl.oninput=()=>{ q=searchEl.value.trim().toLowerCase(); render(); };
+document.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{
+  filter=ch.dataset.f;
+  document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===ch));
+  render();
+});
+
+// ---------------- conflicts ----------------
+function showConflict(who){
+  $("conflictMsg").textContent=who
+    ? `${who} changed this note while you were typing.`
+    : "Someone else changed this note while you were typing.";
+  conflictEl.style.display="block";
+}
+$("takeTheirs").onclick=()=>{
+  if(!pendingRemote) return;
+  const p=pendingRemote, d=get(p.country);
+  d.note=p.note; d.status=p.status; d.author=p.author;
+  if(current===p.country){ notes.value=d.note; metaEl.textContent=d.author?`Last edited by ${d.author}`:""; }
+  conflictEl.style.display="none"; pendingRemote=null; paint(p.country); say("Loaded their version");
+};
+$("keepMine").onclick=()=>{
+  conflictEl.style.display="none"; pendingRemote=null;
+  save(); say("Kept your version");
+};
+
+// ---------------- server sync ----------------
+async function pull(){
+  if(!sb) return;
+  const {data:rows,error}=await sb.from("eu_notes").select("*");
+  if(error){ say("Can't reach the board: "+error.message,true); return; }
+  const fresh={};
+  rows.forEach(r=>fresh[r.country]={status:r.status||"none",note:r.note||"",author:r.author||""});
+  // never let a poll overwrite the row you are actively typing into
+  if(current&&document.activeElement===notes&&data[current]) fresh[current]=data[current];
+  data=fresh;
+  if(current) select(current,true); else render();
+  say("Up to date");
+}
+
+if(sb){
+  sb.channel("eu_notes")
+    .on("postgres_changes",{event:"*",schema:"public",table:"eu_notes"},payload=>{
+      const r=payload.new; if(!r||!r.country) return;
+      const remote={status:r.status||"none",note:r.note||"",author:r.author||""};
+      if(r.country===current&&document.activeElement===notes&&remote.note!==notes.value){
+        // don't clobber what you're typing — offer the choice instead
+        pendingRemote={country:r.country,...remote};
+        showConflict(remote.author);
+        get(current).status=remote.status;
+        paint(current); counts();
+        return;
+      }
+      data[r.country]=remote;
+      if(r.country===current) select(current,true); else { paint(r.country); counts(); }
+    }).subscribe();
+}
+
 render();
-say("Connecting…");
-pull();
+if(offline){
+  say("Couldn't load the sync library, so the board is read-only. Check your connection and reload.",true);
+  notes.disabled=true;
+  document.querySelectorAll(".btns button").forEach(b=>b.disabled=true);
+  meInput.disabled=true;
+}else{
+  say("Connecting…");
+  pull();
+  setInterval(()=>{ if(document.activeElement!==notes) pull(); },30000);
+}
 </script>
 </body>
 </html>
