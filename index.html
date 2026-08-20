@@ -71,6 +71,7 @@
   #meta{font-size:12px;color:#5b6b85;margin-top:8px;min-height:16px}
   #who{margin-top:10px;display:flex;align-items:center;gap:8px;font-size:12px;color:#5b6b85}
   #who input{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font:inherit;font-size:13px}
+  #whoNote{font-size:11px;color:#5b6b85;margin-top:4px;min-height:14px}
   #conflict{display:none;border:1px solid var(--yellow);background:#fdf6e3;
     border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:13px}
   #conflict p{margin:0 0 8px}
@@ -124,7 +125,8 @@
       </div>
       <textarea id="notes" placeholder="Your notes…"></textarea>
       <div id="meta"></div>
-      <div id="who"><label for="me">Your name</label><input id="me" maxlength="24" placeholder="optional"></div>
+      <div id="who"><label for="me">Signed by</label><input id="me" maxlength="24" placeholder="name (optional)"></div>
+      <div id="whoNote">Change this any time — it is saved with your next edit.</div>
     </div>
     <p class="hint" id="hint">Click a country on the left.</p>
   </aside>
@@ -141,7 +143,7 @@ const $=id=>document.getElementById(id);
 const grid=$("grid"), title=$("title"), panel=$("panel"), hint=$("hint"), notes=$("notes"),
       statusEl=$("status"), countsEl=$("counts"), conflictEl=$("conflict"),
       undoBtn=$("undo"), closeBtn=$("close"), meInput=$("me"), metaEl=$("meta"),
-      searchEl=$("q"), asideEl=document.querySelector("aside");
+      searchEl=$("q"), whoNote=$("whoNote"), asideEl=document.querySelector("aside");
 
 let data={}, current=null, filter="all", q="";
 let undoStack=[], pendingRemote=null, authorSupported=true, sb=null, offline=false;
@@ -250,7 +252,7 @@ function save(){
     if(error&&authorSupported&&me&&/author|column|schema/i.test(error.message||"")){
       // the table has no author column — drop the name and carry on saving
       authorSupported=false;
-      meInput.disabled=true; meInput.value=""; meInput.placeholder="needs an 'author' column";
+      whoNote.textContent="Names aren't saved yet — the database has no \u2018author\u2019 column.";
       ({error}=await sb.from("eu_notes").upsert(base,{onConflict:"country"}));
     }
     if(error) say("Not saved: "+error.message,true);
@@ -357,7 +359,6 @@ if(offline){
   say("Couldn't load the sync library, so the board is read-only. Check your connection and reload.",true);
   notes.disabled=true;
   document.querySelectorAll(".btns button").forEach(b=>b.disabled=true);
-  meInput.disabled=true;
 }else{
   say("Connecting…");
   pull();
