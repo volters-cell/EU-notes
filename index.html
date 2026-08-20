@@ -191,7 +191,7 @@ function paint(c){
   b.dataset.s=d.status;
   b.classList.toggle("sel",c===current);
   b.children[0].textContent=c;
-  b.children[1].textContent=(MARK[d.status]||"")+(d.note?" ✎":"");
+  b.children[1].textContent=(MARK[d.status]||"")+(d.note.trim()?" ✎":"");
 }
 
 function counts(){
@@ -264,16 +264,22 @@ undoBtn.onclick=()=>{
 // ---------------- edits ----------------
 document.querySelectorAll(".btns button[data-v]").forEach(b=>b.onclick=()=>{
   if(!current||offline) return;
-  if(b.dataset.v==="none"&&get(current).status!=="none"&&
-     !confirm(`Clear the status for ${current}? The note text is kept, and everyone on the board sees this. You can undo it.`)) return;
-  pushUndo(current);
-  get(current).status=b.dataset.v;
+  const d=get(current);
+  if(b.dataset.v==="none"){
+    if(d.status==="none"&&!d.note) return;
+    if(!confirm(`Delete the status and the note for ${current}? Everyone on the board sees this. You can undo it.`)) return;
+    pushUndo(current);
+    d.status="none"; d.note=""; notes.value="";
+  }else{
+    pushUndo(current);
+    d.status=b.dataset.v;
+  }
   save(); select(current,true);
 });
 
 notes.oninput=()=>{
   if(!current) return;
-  get(current).note=notes.value;
+  get(current).note=notes.value.trim()?notes.value:"";
   save(); paint(current);   // one tile, not the whole grid
 };
 
