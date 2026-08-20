@@ -68,10 +68,6 @@
   textarea{width:100%;min-height:220px;padding:10px;border:1px solid var(--line);
     border-radius:5px;font:inherit;resize:vertical}
   .hint{color:#5b6b85;font-size:13px}
-  #meta{font-size:12px;color:#5b6b85;margin-top:8px;min-height:16px}
-  #who{margin-top:10px;display:flex;align-items:center;gap:8px;font-size:12px;color:#5b6b85}
-  #who input{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font:inherit;font-size:13px}
-  #whoNote{font-size:11px;color:#5b6b85;margin-top:4px;min-height:14px}
   #conflict{display:none;border:1px solid var(--yellow);background:#fdf6e3;
     border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:13px}
   #conflict p{margin:0 0 8px}
@@ -124,9 +120,6 @@
         <button data-v="none">Delete</button>
       </div>
       <textarea id="notes" placeholder="Your notes…"></textarea>
-      <div id="meta"></div>
-      <div id="who"><label for="me">Signed by</label><input id="me" maxlength="24" placeholder="name (optional)"></div>
-      <div id="whoNote">Change this any time — it is saved with your next edit.</div>
     </div>
     <p class="hint" id="hint">Click a country on the left.</p>
   </aside>
@@ -142,15 +135,15 @@ const MARK={green:"✓",yellow:"?",red:"!",none:""};
 const $=id=>document.getElementById(id);
 const grid=$("grid"), title=$("title"), panel=$("panel"), hint=$("hint"), notes=$("notes"),
       statusEl=$("status"), countsEl=$("counts"), conflictEl=$("conflict"),
-      undoBtn=$("undo"), closeBtn=$("close"), meInput=$("me"), metaEl=$("meta"),
-      searchEl=$("q"), whoNote=$("whoNote"), asideEl=document.querySelector("aside");
+      undoBtn=$("undo"), closeBtn=$("close"),
+      searchEl=$("q"), asideEl=document.querySelector("aside");
 
 let data={}, current=null, filter="all", q="";
-let undoStack=[], pendingRemote=null, authorSupported=true, sb=null, offline=false;
-let me=(localStorage.getItem("eu_notes_author")||"");
+let undoStack=[], pendingRemote=null, sb=null, offline=false;
+localStorage.removeItem("eu_notes_author");   // no longer used
 
 const say=(m,bad)=>{statusEl.textContent=m;statusEl.classList.toggle("bad",!!bad);};
-const get=c=>data[c]||(data[c]={status:"none",note:"",author:""});
+const get=c=>data[c]||(data[c]={status:"none",note:""});
 
 // ---- load the sync library; the board still renders if the CDN is unreachable ----
 try{
@@ -216,7 +209,6 @@ function select(c,keepCursor){
   panel.style.display="block"; hint.style.display="none";
   closeBtn.style.display=""; asideEl.classList.add("open");
   if(!keepCursor||document.activeElement!==notes) notes.value=d.note;
-  metaEl.textContent=d.author?`Last edited by ${d.author}`:"";
   document.querySelectorAll(".btns button[data-v]").forEach(b=>
     b.classList.toggle("on",b.dataset.v===d.status));
   render();
@@ -246,17 +238,10 @@ function save(){
   t=setTimeout(async()=>{
     const c=current; if(!c) return;
     const d=get(c);
-    const base={country:c,status:d.status,note:d.note};
-    const row=(authorSupported&&me)?{...base,author:me}:base;
-    let {error}=await sb.from("eu_notes").upsert(row,{onConflict:"country"});
-    if(error&&authorSupported&&me&&/author|column|schema/i.test(error.message||"")){
-      // the table has no author column — drop the name and carry on saving
-      authorSupported=false;
-      whoNote.textContent="Names aren't saved yet — the database has no \u2018author\u2019 column.";
-      ({error}=await sb.from("eu_notes").upsert(base,{onConflict:"country"}));
-    }
+    const {error}=await sb.from("eu_notes")
+      .upsert({country:c,status:d.status,note:d.note},{onConflict:"country"});
     if(error) say("Not saved: "+error.message,true);
-    else{ if(me&&authorSupported){d.author=me;} say("Saved"); }
+    else say("Saved");
   },500);
 }
 
@@ -292,9 +277,6 @@ notes.oninput=()=>{
   save(); paint(current);   // one tile, not the whole grid
 };
 
-meInput.value=me;
-meInput.oninput=()=>{ me=meInput.value.trim(); localStorage.setItem("eu_notes_author",me); };
-
 // ---------------- filters ----------------
 searchEl.oninput=()=>{ q=searchEl.value.trim().toLowerCase(); render(); };
 document.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{
@@ -304,17 +286,14 @@ document.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{
 });
 
 // ---------------- conflicts ----------------
-function showConflict(who){
-  $("conflictMsg").textContent=who
-    ? `${who} changed this note while you were typing.`
-    : "Someone else changed this note while you were typing.";
+function showConflict(){
   conflictEl.style.display="block";
 }
 $("takeTheirs").onclick=()=>{
   if(!pendingRemote) return;
   const p=pendingRemote, d=get(p.country);
-  d.note=p.note; d.status=p.status; d.author=p.author;
-  if(current===p.country){ notes.value=d.note; metaEl.textContent=d.author?`Last edited by ${d.author}`:""; }
+  d.note=p.note; d.status=p.status;
+  if(current===p.country) notes.value=d.note;
   conflictEl.style.display="none"; pendingRemote=null; paint(p.country); say("Loaded their version");
 };
 $("keepMine").onclick=()=>{
@@ -328,7 +307,7 @@ async function pull(){
   const {data:rows,error}=await sb.from("eu_notes").select("*");
   if(error){ say("Can't reach the board: "+error.message,true); return; }
   const fresh={};
-  rows.forEach(r=>fresh[r.country]={status:r.status||"none",note:r.note||"",author:r.author||""});
+  rows.forEach(r=>fresh[r.country]={status:r.status||"none",note:r.note||""});
   // never let a poll overwrite the row you are actively typing into
   if(current&&document.activeElement===notes&&data[current]) fresh[current]=data[current];
   data=fresh;
@@ -340,11 +319,11 @@ if(sb){
   sb.channel("eu_notes")
     .on("postgres_changes",{event:"*",schema:"public",table:"eu_notes"},payload=>{
       const r=payload.new; if(!r||!r.country) return;
-      const remote={status:r.status||"none",note:r.note||"",author:r.author||""};
+      const remote={status:r.status||"none",note:r.note||""};
       if(r.country===current&&document.activeElement===notes&&remote.note!==notes.value){
         // don't clobber what you're typing — offer the choice instead
         pendingRemote={country:r.country,...remote};
-        showConflict(remote.author);
+        showConflict();
         get(current).status=remote.status;
         paint(current); counts();
         return;
